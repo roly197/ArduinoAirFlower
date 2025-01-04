@@ -59,6 +59,9 @@ void setup() {
   // Initalize all outputs to Low. Just to be sure...
   analogWrite(pump1,0);
   analogWrite(pump2,0);
+  pinMode(valve1,OUTPUT);
+  pinMode(valve2,OUTPUT);
+  pinMode(valve3,OUTPUT);
   digitalWrite(valve1,LOW);
   digitalWrite(valve2,LOW);
   digitalWrite(valve3,LOW);
