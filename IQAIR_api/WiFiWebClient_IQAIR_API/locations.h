@@ -1,19 +1,25 @@
-const int NumberOfLocations = 3;
 int selectedLocation = 0; // This stores the selected location (button select / from 0-2)
+
+const int NumberOfLocations = 3;
 const String Location[NumberOfLocations][3] = {
                          {"Enschede","Overijssel","Netherlands"},
                          {"Delhi","Delhi","India"},
                          {"Houston","Texas","USA"}
                          };
-                         // City, Region , Country
+                         // City, Region , Country 
+                         
+const int NumberOfIntervals = 3;                         
 const int AirIntervals[NumberOfLocations][7] = {
                           {0,100,20000,6000,2000,6000,2000},
                           {101,200,20000,3000,1000,3000,1000},
                           {201,999,20000,1000,0000,1000,0000}
                           };
                          // MinResult, MaxResult, preset(ms), inAir(ms), pause1(ms), outAir(ms), pause2(ms)
+
+// From here: do not change variables unless you know what you're doing :-)
+
 const String SearchKey = "aqius"; //
-const unsigned long ApiRequestInterval = 10L; // Interval to request API data (sec)  
+const unsigned long ApiRequestInterval = 1800L; // Interval to request API data (sec). (1800 sec is 30min)  
 const bool debug = true; // Debug information to serial port. In case of problems.
 
 // Arduino Pin assignments
