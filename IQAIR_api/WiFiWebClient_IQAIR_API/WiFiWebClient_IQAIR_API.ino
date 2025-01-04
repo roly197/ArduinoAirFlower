@@ -25,8 +25,6 @@
 #include "arduino_secrets.h"
 #include "locations.h" 
 
-//bool debug = true;
-
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
@@ -48,6 +46,7 @@ bool locationChanged = true; // Indication to deflate and inflate to preset pres
 
 unsigned long lastConnectionTime = 0;            // last time you connected to the server, in milliseconds
 const unsigned long postingInterval = ApiRequestInterval * 1000L; // delay between updates, in milliseconds
+bool firstRun = true;
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server
@@ -103,11 +102,9 @@ void setup() {
   //httpRequest(0); // To start with get the first request 
 }
 
-/* just wrap the received data up to 80 columns in the serial print*/
 /* -------------------------------------------------------------------------- */
 String read_response() {
 /* -------------------------------------------------------------------------- */    
-  //uint32_t received_data_num = 0;
   String resp;
   while (client.available()) {
     resp = client.readStringUntil('\r');
@@ -121,38 +118,53 @@ String read_response() {
 /* -------------------------------------------------------------------------- */
 void loop() {
 /* -------------------------------------------------------------------------- */  
-  // index keeps track of what location we are requesting
-  int index = 0;
-  // 
-  while (index < NumberOfLocations){ 
-    // if there's incoming data from the net connection.
-    // send it out the serial port.  This is for debugging
-    // purposes only:
-    int apiGetVal = (getValueFromJson(read_response(), SearchKey).toInt());
-    if (apiGetVal > 0){
-      Serial.print(Location[index][0]+" ");
-      //Serial.println(apiGetVal);
+  if ((millis() - lastConnectionTime > postingInterval) || firstRun ){
+    firstRun = false;
+    // index keeps track of what location we are requesting
+    bool dataProcessed = true; // Start with a http api request
+    int index = 0;
+  while (index < NumberOfLocations){
+    //if ((millis() - lastConnectionTime > postingInterval) && dataProcessed) {
+    if (dataProcessed) {
+      httpRequest(index);
+      dataProcessed = false;
+    } 
+    while (client.available()) {
+      // if there's incoming data from the net connection do the following:  
+      int apiGetVal = (getValueFromJson(read_response(), SearchKey).toInt());
+      //if (apiGetVal > 0){
+      //Serial.print(Location[index][0]+" ");
       IQAirApiResult[index] = apiGetVal;
-      Serial.println(IQAirApiResult[index]); 
-      index++;
+      Serial.println();
+      //Serial.println(IQAirApiResult[index]); 
       if(debug){
         for (int i = 0; i < NumberOfLocations; i++){
+          Serial.print(Location[i][0]+" ");
           Serial.println(IQAirApiResult[i]);
         }
       }
-    }
-    // if <<defined>> seconds have passed since your last connection,
-    // then connect again and send data:
-    if (millis() - lastConnectionTime > postingInterval) {
-      httpRequest(index);
+      dataProcessed = true;
+      index++;
     }
   }
+  // note the time that the connection was made:
+  lastConnectionTime = millis();
+  }
+  
   // Main loop to run the Air Program here.....
-  for (int j = 0; j < NumberOfLocations; j++){
-    Serial.println("AirLoop" + IQAirApiResult[selectedLocation] );
+  for (int j = 0; j < NumberOfIntervals; j++){
+    //Serial.println("AirLoop :" + IQAirApiResult[selectedLocation] );
     if ((IQAirApiResult[selectedLocation] >= AirIntervals[j][0]) && (IQAirApiResult[selectedLocation] <= AirIntervals[j][1])){
-      if (locationChanged){deflate(AirIntervals[j][2]); inflate(AirIntervals[j][2]); locationChanged = false;}  // If new location is selected, reset to default.
-      runAirProgram(AirIntervals[j][3],AirIntervals[j][4],AirIntervals[j][5],AirIntervals[j][6]); //RunAirProg: inflate, pause1, deflate, pause2
+      if (locationChanged){   // If new location is selected, reset to default.
+        Serial.println("Reset air program to initial state.");
+        digitalWrite(LED_BUILTIN, HIGH);  // Visual indication of reset on
+        deflate(AirIntervals[j][2]); 
+        inflate(AirIntervals[j][2]); 
+        digitalWrite(LED_BUILTIN, LOW);  // Visual indication of reset off
+        locationChanged = false;
+      } 
+      //RunAirProg: inflate, pause1, deflate, pause2
+      runAirProgram(AirIntervals[j][3],AirIntervals[j][4],AirIntervals[j][5],AirIntervals[j][6]); 
     }  
   }
 }
@@ -160,6 +172,7 @@ void loop() {
 /* -------------------------------------------------------------------------- */
 void runAirProgram(int infl,int p1, int defl, int p2){
 /* -------------------------------------------------------------------------- */
+  if (debug){Serial.println("Running air program for location: " + Location[selectedLocation][0] + " with air quality: " + IQAirApiResult[selectedLocation]);}
   inflate(infl);
   if (debug){Serial.println("pause1");}
   delay(p1);
@@ -222,7 +235,7 @@ void httpRequest(int i) {
     client.println("Connection: close");
     client.println();
     // note the time that the connection was made:
-    lastConnectionTime = millis();
+    // lastConnectionTime = millis();
   } else {
     // if you couldn't make a connection:
     Serial.println("connection failed");
