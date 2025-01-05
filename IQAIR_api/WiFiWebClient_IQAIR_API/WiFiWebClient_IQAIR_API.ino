@@ -162,12 +162,12 @@ void loop() {
         Serial.println("Reset air program to initial state.");
         digitalWrite(LED_BUILTIN, HIGH);  // Visual indication of reset on
         deflate(AirIntervals[j][2]); 
-        inflate(AirIntervals[j][2]); 
+        inflate(AirIntervals[j][3]); 
         digitalWrite(LED_BUILTIN, LOW);  // Visual indication of reset off
         locationChanged = false;
       } 
       //RunAirProg: inflate, pause1, deflate, pause2
-      runAirProgram(AirIntervals[j][3],AirIntervals[j][4],AirIntervals[j][5],AirIntervals[j][6]); 
+      runAirProgram(AirIntervals[j][4],AirIntervals[j][5],AirIntervals[j][6],AirIntervals[j][7]); 
     }  
   }
 }
@@ -189,19 +189,33 @@ void inflate(int Time){
 /* -------------------------------------------------------------------------- */
   if (debug){Serial.println("inflate");}
   digitalWrite(valve1, LOW); // Turn the valve to inflate
+  if (DualAction){digitalWrite(valve2, LOW);}
   analogWrite(pump1, 254);   // Turn the pump to max
+  if (DualAction){analogWrite(pump2, 254);}
   delay(Time);
   analogWrite(pump1, 0);     // Turn the pump off
+  if (DualAction){analogWrite(pump2, 0);}
 }
 
 /* -------------------------------------------------------------------------- */
 void deflate(int Time){
 /* -------------------------------------------------------------------------- */
   if (debug){Serial.println("deflate");}
-  analogWrite(pump1, 0);   // Turn the pump off
-  digitalWrite(valve1, HIGH); // Turn the valve to deflate
-  delay(Time);
-  digitalWrite(valve1, LOW); // Turn the valve to deflate
+  if (VacuumValveOfPump){
+   analogWrite(pump1, 0);   // Turn the pump off
+   if (DualAction){analogWrite(pump2, 0);}
+   digitalWrite(valve1, HIGH); // Turn on the valve to deflate
+   if (DualAction){digitalWrite(valve2, HIGH);}
+   delay(Time);
+   digitalWrite(valve1, LOW); // Turn off the valve to stop deflate
+   if (DualAction){digitalWrite(valve2, LOW);}
+  }  
+  else{
+    analogWrite(pump1, 0);   // Turn the pump1 off
+    analogWrite(pump2, 254);   // Turn on the pump2 to deflate
+    delay(Time);
+    analogWrite(pump2, 0);   // Turn the pump2 on to stop deflate
+  }
 }
 
 /* -------------------------------------------------------------------------- */
